@@ -1,0 +1,6 @@
+interface:
+  display_name: "动态表情包制作"
+  short_description: "提供主体图片和场景，制作字体统一的4×4连帧及透明背景GIF表情包"
+  default_prompt: "使用 $animated-stickers，根据我提供的主体形象和场景制作动作连贯、字体一致的透明背景GIF，并交付4×4连帧图。"
+policy:
+  allow_implicit_invocation: true
