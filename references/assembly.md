@@ -3,8 +3,10 @@
 脚本依赖Python、Pillow与NumPy；先检测现有环境或已提供的依赖运行时，不假设临时虚拟环境或模型存在。缺依赖时安装必要库并遵守运行环境权限。脚本不会调用收费API，不负责绘制角色或自动去白底。
 
 ```sh
-python3 <技能目录>/scripts/build_sticker.py <配置.json>
+python3 <技能目录>/scripts/build_sticker.py <配置.json> --prepare-only
 ```
+
+先用此命令生成静态预检。执行者查看全部16帧及深浅底、二值透明预览，确认没有明显毛边、残底、文字断笔或字腔粘连后，记录检查结果并将配置的`preflight_approved`改为`true`，再运行不带`--prepare-only`的同一命令编码GIF。不需要为常规验收再问用户许可，也不能只因脚本运行成功就标记通过。旧配置直接编码会被拒绝，须先做预检。
 
 配置文件中的相对路径以配置所在目录为基准。输出目录须为空，避免覆盖既有文件。正常图集按等分4×4拆分；异常网格需先目视确认真实边界，再填写16个rects，不能用最低透明像素数猜边界而不验收。
 
@@ -16,6 +18,8 @@ python3 <技能目录>/scripts/build_sticker.py <配置.json>
   "font": "/System/Library/Fonts/STHeiti Medium.ttc",
   "font_size": 34,
   "caption_color": "#354C28",
+  "caption_stroke_width": 1,
+  "preflight_approved": false,
   "size": 400,
   "duration_ms": 100
 }
@@ -26,19 +30,22 @@ python3 <技能目录>/scripts/build_sticker.py <配置.json>
 - `frames`：按顺序列出16个透明PNG路径，替代`sheet`。适用于已修复/注册后的帧。
 - `rects`：与`sheet`搭配的16个`[left,top,right,bottom]`像素裁切框。
 - `caption_layer`：一张与输出画布等大的透明PNG文字层，替代字体渲染；文字放在底部保留区。不要将人物混入这一图层。
+- `caption_stroke_width`：同色描边宽度，单位是输出像素。400px画布默认1px，其他尺寸默认按比例调整；设0可保留原字重。字体文件不变，渲染一次4倍尺寸文字再缩小；描边范围计入排版。若字体本身很粗或复杂字字腔变窄，减到0–0.75px并重新预检，不一律越粗越好。使用`caption_layer`时忽略此参数，保留其既定设计。
 - `offsets`：16组`[dx,dy]`，在统一缩放后修正经确认的非设计漂移。禁止用偏移掩盖被裁掉的肢体。
 - `duration_ms`须为GIF可精确表示的10毫秒倍数，至少20毫秒。
 
 脚本对全部帧使用一个统一缩放比例，保留相对尺寸；主体进入上方86%的区域，文字放底部。它不是构图修复器：错误原图应先修复。GIF为二值透明，PNG连帧保留半透明；文字/蒸汽边缘的实际效果必须看深浅底预览。
 
-输出：`sticker.gif`、`sprite-4x4.png`、`frames/`、`preview-light.gif`、`preview-dark.gif`、`preview.html`和`verification.json`。报告包含帧数、时长、透明性、文字一致性、不同帧数、相邻帧与循环接缝差分提示。脚本不会因为指标通过就宣称流畅。
+预检输出写入`<output>-preflight/`，含`frames/`、`sprite-4x4.png`、`caption-fixed.png`、`preview-light.png`、`preview-dark.png`、`gif-alpha-light.png`、`gif-alpha-dark.png`和`review.json`，不会生成GIF。`preview`保留PNG半透明边缘；`gif-alpha`展示128阈值后的二值透明效果，尚未模拟调色板量化。摘要仅证明正式编码与预检像素及时长一致，不自动证明视觉质量。预检目录须为空；修改视觉内容或时长后选新的`output`版本并重新预检。`preflight_approved`必须在实际检查后设置。
+
+正式输出：`sticker.gif`、`sprite-4x4.png`、`frames/`、`preview-light.gif`、`preview-dark.gif`、`preview.html`和`verification.json`。报告包含帧数、时长、透明性、文字一致性、字体、实际字号、描边宽度、预检摘要、不同帧数、相邻帧与循环接缝差分提示。脚本不会自动去底或清理轮廓，也不会因为指标通过就宣称流畅。
 
 ## 人工验收点
 
 1. 16帧顺序正确，动作峰值有前后过程；肢体、道具不瞬移、不闪现、不长出额外手指。
-2. 表情变化自然，角色比例稳定；文字不抖动、不变字；包装小字单独检查。
+2. 表情变化自然，角色比例稳定；文字不抖动、不变字。以实际400px显示和放大视图检查中文字细笔画、标点及O/K等字形；适度加粗后字腔仍开口、相邻字不粘连。包装小字单独检查。
 3. 帧16→1过渡自然；播放两轮，留意复位跳变。需要修复时优先针对异常帧或整体重生成，不用简单叠化制造双影。
-4. 浅底和深底下没有矩形底色、白块、明显白边、手脚孔洞或上帧残影。
+4. 浅底和深底下没有矩形底色、白块、明显白边、手脚孔洞或上帧残影。对照PNG与GIF：PNG就有毛边时先修源图；只在GIF出现的问题检查二值透明或调色板量化，不对带字成品再抠图。深色字在深底对比不足是可读性问题，不要靠模糊或错误去底解决；必要时按系列风格设计独立描边文字层。
 5. 编码验收与观感验收分别报告。对“流畅”“无漏帧”的描述要有对应证据，不把100ms/帧宣传成高帧率动画。
 
 交付时使用用户可打开的实际文件链接。批量ZIP只打包交付文件与必要说明，不塞进依赖、模型或用户无关参考图。

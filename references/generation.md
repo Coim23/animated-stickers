@@ -19,6 +19,8 @@ Product: [exact package colors, layout, visible text, orientation and hand conta
 Style: match reference, consistent lighting/materials across all frames.
 Background: true alpha transparency, no floor, no cast floor shadow, no backdrop,
 no baked checkerboard. Preserve opaque white parts of subject and props.
+Clean silhouette and transparent margins; no white matte, fringe, stray edge pixels
+or background speckles. Keep intentional translucent details intact.
 Text: omit main caption entirely; it will be added from one fixed text layer later.
 No grid strokes, frame labels, watermarks, extra limbs, camera motion or abrupt pose changes.
 ```
@@ -28,3 +30,5 @@ No grid strokes, frame labels, watermarks, extra limbs, camera motion or abrupt 
 动作停顿可以自然存在；完全重复的帧不是自动失败，但要防止生成器重复整行，或编码器合并重复帧导致16帧合同失效。对于严格16帧要求，修复生成内容，不能向不可见角落加噪点来骗过帧数验证。
 
 字体“相同”包括：字形、字体文件、字号、颜色、描边、排版与位置。主配文只渲染一次。用户希望沿用特殊艺术字时，需要独立透明的文字素材；不要从含人物遮挡的区域粗暴剪出一块带底的文字。
+
+生成提示不包含主配文或要求生成器加粗字样。主体的透明底、边缘修复在PNG阶段完成；默认的适度加粗由后续固定文字层实现。合成GIF前必须先通过静态预检，详见assembly.md。
